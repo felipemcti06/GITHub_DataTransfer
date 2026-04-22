@@ -1,0 +1,20 @@
+{
+	"@type":"Cube",
+	"Name":"Teste_Cursor",
+	"Dimensions":
+	[
+		{
+			"@id":"Dimensions('ALL.D.YEAR')"
+		},
+		{
+			"@id":"Dimensions('ALL.D.MOTHN')"
+		},
+		{
+			"@id":"Dimensions('ALL.D.VERSION')"
+		},
+		{
+			"@id":"Dimensions('ALL.D.Metrics')"
+		}
+	],
+	"Views@Code.links":[]
+}

@@ -1,0 +1,12 @@
+{
+	"@type":"Dimension",
+	"Name":"ALL.D.Metrics",
+	"Hierarchies@Code.links":
+	[
+		"ALL.D.Metrics.hierarchies/ALL.D.Metrics.json"
+	],
+	"DefaultHierarchy":
+	{
+		"@id":"Dimensions('ALL.D.Metrics')/Hierarchies('ALL.D.Metrics')"
+	}
+}
