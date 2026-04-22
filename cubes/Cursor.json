@@ -13,5 +13,6 @@
 			"@id":"Dimensions('ALL.D.YEAR')"
 		}
 	],
+	"Rules@Code.link":"Cursor.rules",
 	"Views@Code.links":[]
 }
