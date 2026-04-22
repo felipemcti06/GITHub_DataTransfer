@@ -1,0 +1,17 @@
+{
+	"@type":"Cube",
+	"Name":"Cursor",
+	"Dimensions":
+	[
+		{
+			"@id":"Dimensions('Teste')"
+		},
+		{
+			"@id":"Dimensions('teste2')"
+		},
+		{
+			"@id":"Dimensions('ALL.D.YEAR')"
+		}
+	],
+	"Views@Code.links":[]
+}
