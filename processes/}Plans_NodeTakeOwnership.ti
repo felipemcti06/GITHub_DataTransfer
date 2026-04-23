@@ -1,0 +1,123 @@
+#region Prolog
+
+vNow = TIMST (NOW(), '\Y-\m-\d \h:\i:\s' );
+vUser = TM1User();
+
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanControlCube = pPrefix;
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+# List of node states
+# 0 - Available
+# 1 - In Progress
+# 2 - Reserved 
+# 3 - Pending 
+# 4 - Completed 
+
+vCurrentState = CellGetS ( vPlanStateCube, pNode, pTask, 'State' );
+vCurrentOwner = CellGetS ( vPlanStateCube, pNode, pTask, 'Owner' );
+
+# Validation when ownership is enabled ( vOwnership = 1 )
+
+IF ( vCurrentState @= '2' & vCurrentOwner @= vUser );
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Node is already owned by user',
+                'pError', 'Error' );
+    ProcessError;
+ELSEIF ( vCurrentState @= '3' );
+    # Cannot release ownership of a node that is completed
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Cannot take ownership of pending node',
+                'pError', 'Error' );
+    ProcessError;
+ELSEIF ( vCurrentState @= '4'  );
+    # Cannot release ownership of a node that is completed
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Cannot take ownership of completed node',
+                'pError', 'Error' );
+    ProcessError;
+ENDIF;
+
+vCurrentTakeOwnershipNode = CellGetS ( vPlanStateCube, pNode, pTask, 'TakeOwnershipNode' );
+
+
+IF ( vCurrentState @= '0' % vCurrentState @= '1' );
+    CellPutS ( '2', vPlanStateCube, pNode, pTask, 'State' );
+    CellPutS ( vUser, vPlanStateCube, pNode, pTask, 'Owner' ); 
+    CellPutS ( pWorkspaceUser, vPlanStateCube, pNode, pTask, 'WorkspaceOwner' );    
+    CellPutS ( pNode, vPlanStateCube, pNode, pTask, 'TakeOwnershipNode' ); 
+    CellPutS ( 'User ' | vUser | ' took ownership', vPlanStateCube, pNode, pTask, 'Last action' ); 
+    CellPutS ( vNow, vPlanStateCube, pNode, pTask, 'Last Update' ); 
+ELSEIF ( vCurrentState @= '2'  );
+    IF ( vCurrentTakeOwnershipNode @<> pNode );
+        ExecuteProcess( '}Plans_NodeReleaseOwnership',
+                       'pPlan', pPlan,
+                       'pNode', vCurrentTakeOwnershipNode,
+                       'pTask', pTask,
+                       'pPrefix', pPrefix );
+
+    ENDIF;
+    CellPutS ( vCurrentState, vPlanStateCube, pNode, pTask, 'State' );
+    CellPutS ( vUser, vPlanStateCube, pNode, pTask, 'Owner' );
+    CellPutS ( pWorkspaceUser, vPlanStateCube, pNode, pTask, 'WorkspaceOwner' );
+    CellPutS ( pNode, vPlanStateCube, pNode, pTask, 'TakeOwnershipNode' ); 
+    CellPutS ( 'User ' | vUser | ' took ownership from ' | vCurrentOwner, vPlanStateCube, pNode, pTask, 'Last action' ); 
+    CellPutS ( vNow, vPlanStateCube, pNode, pTask, 'Last Update' ); 
+ENDIF;
+
+#  Updated the descendants of the node where the state is changing 
+vElementChildCount = ElementComponentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementChildCount > 0);
+    vElementIndex = 1;        
+    vNodeChild = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    WHILE ( vNodeChild @<> '' );
+        IF ( ElementIsAncestor ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, vNodeChild )  = 1 );
+            vCurrentState = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'State' );
+            vCurrentOwner = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'Owner' );
+            # Only change the node to state 2 if the current state is 1.  Cannot take ownership of nodes that are submitted, completed, or rejected 
+            IF ( vCurrentState @= '0' % vCurrentState @= '1' );
+                CellPutS ( '2', vPlanStateCube, vNodeChild, pTask, 'State' ); 
+                CellPutS ( vUser, vPlanStateCube, vNodeChild, pTask, 'Owner' );
+                CellPutS ( pWorkspaceUser, vPlanStateCube, vNodeChild, pTask, 'WorkspaceOwner' );
+                CellPutS ( pNode, vPlanStateCube, vNodeChild, pTask, 'TakeOwnershipNode' );
+                CellPutS ( 'User ' | vUser | ' took ownership', vPlanStateCube, vNodeChild, pTask, 'Last action' ); 
+                CellPutS ( vNow, vPlanStateCube, vNodeChild, pTask, 'Last Update' );
+            ELSEIF ( vCurrentState @= '2' );
+                CellPutS ( vCurrentState, vPlanStateCube, vNodeChild, pTask, 'State' ); 
+                CellPutS ( vUser, vPlanStateCube, vNodeChild, pTask, 'Owner' );
+                CellPutS ( pWorkspaceUser, vPlanStateCube, vNodeChild, pTask, 'WorkspaceOwner' );
+                CellPutS ( pNode, vPlanStateCube, vNodeChild, pTask, 'TakeOwnershipNode' );
+                CellPutS ( 'User ' | vUser | ' took ownership from ' | vCurrentOwner, vPlanStateCube, vNodeChild, pTask, 'Last action' ); 
+                CellPutS ( vNow, vPlanStateCube, vNodeChild, pTask, 'Last Update' ); 
+            ENDIF;
+        ENDIF;
+        vElementIndex = vElementIndex + 1;       
+        vNodeChild = ElementName( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    END;
+ENDIF;
+
+
+#  Update the ancestors of the node where the state is changing
+vElementParentCount = ElementParentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementParentCount = 1);
+    vParentNode = ElementParent ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, 1 );
+    ExecuteProcess ( '}Plans_SetNodeParentState',
+                    'pPlan', pPlan,
+                    'pTask', pTask,
+                    'pNode', vParentNode,
+                    'pState', '2',
+                    'pPrefix', pPrefix );
+ENDIF;
+
+
+#endregion

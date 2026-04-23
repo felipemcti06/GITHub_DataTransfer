@@ -1,0 +1,27 @@
+#region Prolog
+vNow           = TIMST (NOW(), '\Y-\m-\d \h:\i\:\s' );
+
+vPlanControlCube = pPrefix;
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy =vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+DimensionElementInsertDirect ( vPlanTaskDimension, '', pTask, 'N' );
+#AttrPutN ( pOwnership, vPlanTaskDimension, pTask, 'Ownership' );
+
+subsetSize = HierarchySubsetGetSize ( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanApprovalSubset );
+vNodeIndex = 1;
+WHILE ( vNodeIndex <= subsetSize );
+    vNode = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vNodeIndex );
+    # State 0 = Available
+    CellPutS ( '0', vPlanStateCube, vNode, pTask, 'State' );
+    CellPutS ( vNow, vPlanStateCube, vNode, pTask, 'Last Update' );
+    vNodeIndex = vNodeIndex + 1;
+END;
+
+
+#endregion

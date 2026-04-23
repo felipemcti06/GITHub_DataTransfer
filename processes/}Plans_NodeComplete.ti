@@ -1,0 +1,82 @@
+#region Prolog
+
+vNow = TIMST (NOW(), '\Y-\m-\d \h:\i:\s' );
+vUser = TM1User();
+
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanControlCube = pPrefix;
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+vContributorGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Contributor' );
+vReviewerGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Reviewer' );
+
+# List of node states
+# 0 - Available
+# 1 - In Progress
+# 2 - Reserved 
+# 3 - Pending 
+# 4 - Completed 
+
+vCurrentState = CellGetS ( vPlanStateCube, pNode, pTask, 'State' );
+vCurrentOwner = CellGetS ( vPlanStateCube, pNode, pTask, 'Owner' );
+
+# Validation when ownership is enabled ( vOwnership = 1 )
+
+IF ( vCurrentState @= '0' % vCurrentState @= '1' & vCurrentState @= '2' % vCurrentState @= '4');
+    # Invalid to move from directly from Available to Completed or Returned
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Node must be pending before complete' ,
+                'pError', 'Error' );
+    ProcessError;
+ENDIF;
+
+
+vNewState = '4';
+CellPutS ( vNewState, vPlanStateCube, pNode, pTask, 'State' ); 
+CellPutS ( 'User ' | vUser | ' approved node', vPlanStateCube, pNode, pTask, 'Last action' ); 
+CellPutS ( vNow, vPlanStateCube, pNode, pTask, 'Last Update' );  
+
+
+#  Updated the descendants of the node where the state is changing 
+vElementChildCount = ElementComponentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementChildCount > 0);
+    vElementIndex = 1;        
+    vNodeChild = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    WHILE ( vNodeChild @<> '' );
+        IF ( ElementIsAncestor ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, vNodeChild )  = 1 );
+            vCurrentState = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'State' );
+            vCurrentOwner = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'Owner' );
+            vActionMessage = '';
+            IF ( vCurrentState @= '3' );
+                CellPutS ( vNewState, vPlanStateCube, vNodeChild, pTask, 'State' ); 
+                CellPutS ( 'User ' | vUser | ' approved node', vPlanStateCube, vNodeChild, pTask, 'Last action' ); 
+                CellPutS ( vNow, vPlanStateCube, vNodeChild, pTask, 'Last Update' );  
+            ENDIF;
+
+        ENDIF;
+        vElementIndex = vElementIndex + 1;       
+        vNodeChild = ElementName( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    END;
+ENDIF;
+
+
+#  Update the ancestors of the node where the state is changing
+vElementParentCount = ElementParentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementParentCount = 1);
+    vParentNode = ElementParent ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, 1 );
+    ExecuteProcess ( '}Plans_SetNodeParentState',
+                    'pPlan', pPlan,
+                    'pTask', pTask,
+                    'pNode', vParentNode,
+                    'pState', vNewState,
+                    'pPrefix', pPrefix );
+ENDIF;
+
+
+#endregion

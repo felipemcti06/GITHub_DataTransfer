@@ -1,0 +1,38 @@
+#region Prolog
+
+vPlansConfigDimension = pPrefix | '_Config';
+vPlansConfigValueDimension = pPrefix | '_Value'; 
+vPlansConfigCube = pPrefix | '_' | 'Config';
+
+
+IF ( DimensionExists ( vPlansConfigDimension ) = 0 );
+    DimensionCreate ( vPlansConfigDimension );
+ENDIF;
+DimensionElementInsertDirect ( vPlansConfigDimension, '', 'ProcessVersion', 'N' );
+
+IF ( DimensionExists ( vPlansConfigValueDimension ) = 0 );
+    DimensionCreate ( vPlansConfigValueDimension );
+ENDIF;
+DimensionElementInsertDirect ( vPlansConfigValueDimension, '', 'Value', 'N' );
+
+IF ( CubeExists ( vPlansConfigCube ) = 0 );
+    CubeCreate ( vPlansConfigCube, vPlansConfigDimension, vPlansConfigValueDimension );
+ENDIF;
+CellPutN ( pVersion, vPlansConfigCube, 'ProcessVersion', 'Value' );
+
+#endregion
+#region Epilog
+
+vPlanGroup = pPrefix | '_Everyone';
+
+IF ( CubeExists( '}DimensionSecurity' ) = 1 );
+    CellPutS ( 'READ', '}DimensionSecurity', vPlansConfigDimension, vPlanGroup );
+    CellPutS ( 'READ', '}DimensionSecurity', vPlansConfigValueDimension, vPlanGroup );
+ENDIF;
+
+IF ( CubeExists( '}CubeSecurity' ) = 1 );
+    CellPutS ( 'READ', '}CubeSecurity', vPlansConfigCube, vPlanGroup );
+ENDIF;
+
+SecurityRefresh;
+#endregion

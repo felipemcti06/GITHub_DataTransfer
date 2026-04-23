@@ -1,0 +1,27 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_DeletePlan",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"}Plans_DeletePlan.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pPlan",
+			"Prompt":"",
+			"Value":"Plan A",
+			"Type":"String"
+		},
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		}
+	],
+	"Variables":[]
+}

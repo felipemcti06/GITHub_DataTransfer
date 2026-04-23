@@ -1,0 +1,33 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_Setup",
+	"HasSecurityAccess":true,
+	"Code@Code.link":"}Plans_Setup.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pReset",
+			"Prompt":"",
+			"Value":"N",
+			"Type":"String"
+		},
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		},
+		{
+			"Name":"pVersion",
+			"Prompt":"",
+			"Value":0,
+			"Type":"Numeric"
+		}
+	],
+	"Variables":[]
+}

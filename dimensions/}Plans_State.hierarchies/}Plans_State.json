@@ -1,0 +1,40 @@
+{
+	"@type":"Hierarchy",
+	"Name":"}Plans_State",
+	"Elements":
+	[
+		{
+			"Name":"Contributor",
+			"Type":"String"
+		},
+		{
+			"Name":"Reviewer",
+			"Type":"String"
+		},
+		{
+			"Name":"State",
+			"Type":"String"
+		},
+		{
+			"Name":"Owner",
+			"Type":"String"
+		},
+		{
+			"Name":"WorkspaceOwner",
+			"Type":"String"
+		},
+		{
+			"Name":"TakeOwnershipNode",
+			"Type":"String"
+		},
+		{
+			"Name":"Last update",
+			"Type":"String"
+		},
+		{
+			"Name":"Last action",
+			"Type":"String"
+		}
+	],
+	"Subsets@Code.links":[]
+}

@@ -1,0 +1,112 @@
+#region Prolog
+vNow           = TIMST (NOW(), '\Y-\m-\d \h:\i:\s' );
+
+ExecuteProcess( '}Plans_Setup',
+	'pReset', 'N',
+	'pPrefix', pPrefix );
+
+
+vDimension = pDimension;
+IF ( pHierarchy @= '' );
+    vHierarchy = pDimension;
+ELSE;
+    vHierarchy = pHierarchy;
+ENDIF;
+
+IF ( pSubset @= '' );
+    vSubset = '}Plans_' | TIMST (NOW(), '\Y\m\d\h\i\s' );
+    vSetMDX = '{[' | vDimension | '].[' | vHierarchy | '].MEMBERS}';
+    SubsetCreatebyMDX ( vSubset, vSetMDX, 1 );
+ELSE;
+    vSubset = pSubset;
+ENDIF;
+
+vPlans = pPrefix;
+vPlansErrors = pPrefix | '_Errors';
+vPlanStateDimension = pPrefix | '_State';
+vPlanStateCubeName = pPrefix | '_' | pPlan | '_State';
+vPlanErrorsDimension = pPrefix | '_Errors';
+vPlanErrors = pPrefix | '_' | pPlan | '_Errors';
+vPlanErrorLines = pPrefix | '_' | pPlan | '_ErrorLines';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+pPlanApprovalSubset = 'Default';
+
+# Validate the approval hierarchy
+ExecuteProcess ( '}Plans_ValidateResponsibilityHierarchy',
+                'pDimension', pDimension,
+                'pHierarchy', vHierarchy,
+                'pSubset', vSubset );
+
+ExecuteProcess ( '}Plans_GenerateResponsibilityHierarchy',
+                'pPlan', pPlan,
+                'pPrefix', pPrefix,
+                'pDimension', pDimension,
+                'pHierarchy', pHierarchy,
+                'pSubset', vSubset );
+
+# Validate a plan with the same name does not already exist
+# Only applies when the replace parameter is not set to 'Y'
+IF ( DimensionElementExists ( vPlans, pPlan ) = 1 & pReplace @<> 'Y');
+    RunProcess ( '}Plans_LogError', 'pPlan', pPlan, 'pError', 'Failed to create plan ' | pPlan, 'pMessage', 'Plan already exists' );
+    ProcessError;
+ENDIF;
+
+# Delete an existing Workflow with the same name and add the new workflow
+IF ( DimensionElementExists ( vPlans, pPlan ) = 1  );
+    ExecuteProcess ( '}Plans_DeletePlan', 'pPlan', pPlan );
+ENDIF;
+DimensionElementInsertDirect ( vPlans, '', pPlan, 'N' );
+
+CellPutS ( pPlan, vPlans, pPlan, 'Name' );
+CellPutS ( TM1User(), vPlans, pPlan, 'Owner' );
+CellPutS ( vDimension, vPlans, pPlan, 'Dimension' );
+CellPutS ( vHierarchy, vPlans, pPlan, 'Hierarchy' );
+CellPutS ( vNow, vPlans, pPlan, 'Created' );
+
+IF (pSubset @<> ''); 
+    CellPutS ( vSubset, vPlans, pPlan, 'Subset' ); 
+ENDIF;
+
+CellPutN ( 0, vPlans, pPlan, 'State' );
+
+
+# Task dimension and state cube
+DimensionCreate ( vPlanTaskDimension );
+#AttrInsert ( vPlanTaskDimension, '', 'Ownership', 'N' );
+CubeCreate ( vPlanStateCubeName, vPlanApprovalDimension, vPlanTaskDimension, vPlanStateDimension );
+
+IF ( CubeExists ( '}CubeProperties' ) = 1 );
+    CellPutS( 'YES', '}CubeProperties', vPlanStateCubeName, 'LOGGING' );
+ENDIF;
+
+vPlanStateView = 'Default';
+vMDX = 'SELECT { TM1SubsetAll([' | vPlanStateDimension | '])} ON 0, NON EMPTY {TM1SubsetToSet([' | vPlanApprovalDimension | '].[' | vPlanApprovalHierarchy | '] , "' | vSubset | '" , "public")} ON 1 FROM [' | vPlanStateCubeName | '] WHERE ([' | vPlanTaskDimension | '].[' | vPlanTaskDimension | '].DEFAULTMEMBER)';
+ViewCreateByMDX ( vPlanStateCubeName, vPlanStateView, vMDX );
+
+# Error Cube
+DimensionCreate( vPlanErrorLines );
+DimensionElementInsertDirect ( vPlanErrorLines, '', '1', 'N' );
+CubeCreate ( vPlanErrors, vPlanTaskDimension, vPlanErrorLines, vPlanErrorsDimension );
+
+#endregion
+#region Epilog
+
+# Give the everyone group READ access to all TM1 objects created by the plan 
+vPlansEveryoneGroup = pPrefix | '_Everyone';
+IF ( CubeExists ( '}CubeSecurity' ) = 1 );
+    CellPutS ( 'READ', '}CubeSecurity', pPrefix | '_' | pPlan | '_State', vPlansEveryoneGroup );
+    vPlanApprovalAttributeCube = '}ElementAttributes_' | vPlanApprovalDimension;
+    IF ( CubeExists ( vPlanApprovalAttributeCube ) = 1 );
+        CellPutS ( 'READ', '}CubeSecurity', vPlanApprovalAttributeCube, vPlansEveryoneGroup );
+    ENDIF;
+    CellPutS ( 'READ', '}CubeSecurity', pPrefix | '_' | pPlan | '_Errors', vPlansEveryoneGroup );
+ENDIF;
+
+IF ( CubeExists ( '}DimensionSecurity' ) = 1 );
+    CellPutS ( 'READ', '}DimensionSecurity', pPrefix | '_' | pPlan | '_Tasks', vPlansEveryoneGroup );
+    CellPutS ( 'READ', '}DimensionSecurity', pPrefix | '_' | pPlan | '_ErrorLines', vPlansEveryoneGroup );
+    CellPutS ( 'READ', '}DimensionSecurity', vPlanApprovalDimension, vPlansEveryoneGroup );
+ENDIF;
+#endregion

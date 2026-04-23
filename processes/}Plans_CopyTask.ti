@@ -1,0 +1,40 @@
+#region Prolog
+vNow           = TIMST (NOW(), '\Y-\m-\d \h:\i\:\s' );
+
+IF ( pNewPlan @= '' );
+    vNewPlan = pPlan;
+ELSE;
+    vNewPlan = pNewPlan;
+ENDIF;
+
+vSourcePlanStateCube = pPrefix | '_' | pPlan | '_State';
+vTargetPlanStateCube = pPrefix | '_' | vNewPlan | '_State';
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+vSourcePlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vTargetPlanTaskDimension = pPrefix | '_' | vNewPlan | '_Tasks';
+
+DimensionElementInsertDirect ( vTargetPlanTaskDimension, '', pNewTask, 'N' );
+
+vNodeIndex = 1;
+vNode = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vNodeIndex );
+WHILE ( vNode @<> '' );
+    CellPutS ( CellGetS ( vSourcePlanStateCube, vNode, pTask, 'Contributor' ), vTargetPlanStateCube, vNode, pNewTask, 'Contributor' );
+    CellPutS ( CellGetS ( vSourcePlanStateCube, vNode, pTask, 'Reviewer' ), vTargetPlanStateCube, vNode, pNewTask, 'Reviewer' );
+    CellPutS( '', vTargetPlanStateCube, vNode, pNewTask, 'Owner' );
+    CellPutS( '', vTargetPlanStateCube, vNode, pNewTask, 'WorkspaceOwner' );
+    
+    CellPutS ( '0', vTargetPlanStateCube, vNode, pNewTask, 'State' );
+    CellPutS ( vNow, vTargetPlanStateCube, vNode, pNewTask, 'Last Update' );
+    vNodeIndex = vNodeIndex + 1;
+    vNode = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vNodeIndex );
+END;
+
+#endregion
+#region Epilog
+
+
+#endregion

@@ -1,0 +1,20 @@
+#region Prolog
+
+
+IF ( CubeExists ( pPrefix ) = 1 );
+    vPlanIndex = DIMSIZ ( pPrefix );
+    vPlan = DIMNM ( pPrefix, vPlanIndex );
+    WHILE ( vPlanIndex > 0 );
+        ExecuteProcess ( '}Plans_DeletePlan',
+                        'pPlan', vPlan,
+                        'pPrefix', pPrefix );
+        DimensionElementDeleteDirect ( pPrefix, vPlan );
+
+        vPlanIndex = vPlanIndex - 1;
+        vPlan = DIMNM ( pPrefix, vPlanIndex );
+    END;
+ENDIF;
+
+
+
+#endregion

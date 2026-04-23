@@ -1,0 +1,120 @@
+#region Prolog
+IF ( DimensionExists ( pDimension ) = 0 );
+    ProcessError();
+ENDIF;
+
+# Handeling for no hierarchy being provided.  Assumes the same name hierarchy as the dimension
+IF ( pHierarchy @= '' );
+    vApprovalHierarchy = pDimension;
+ELSE;
+    vApprovalHierarchy = pHierarchy;
+ENDIF;
+
+IF ( HierarchyExists ( pDimension, vApprovalHierarchy ) = 0 );
+    ProcessError();
+ENDIF;
+
+
+IF ( pSubset @<> '' );
+    IF ( HierarchySubsetExists( pDimension, pHierarchy, pSubset ) = 0 );
+        ProcessError();
+    ENDIF;
+ENDIF;
+
+# Handeling for no subset being provided.  Assumes a set of all members
+IF ( pSubset @= '' );
+    vSubset = '}Plans_' | TIMST (NOW(), '\Y\m\d\h\i\s' );
+    vSetMDX = '{[' | pDimension | '].[' | pHierarchy | '].MEMBERS}';
+    IF ( HierarchySubsetExists ( pDimension, pHierarchy, vSubset ) = 1);
+        HierarchySubsetDestroy ( pDimension, pHierarchy, vSubset );
+    ENDIF;
+    SubsetCreatebyMDX ( vSubset, vSetMDX, 1 );
+ELSE;
+    vSubset = pSubset;
+ENDIF;
+
+vHighestLevel = -1;
+vHighestLevelCount = 0;
+vHighestElement = '';
+
+subsetSize = HierarchySubsetGetSize ( pDimension, vApprovalHierarchy, vSubset );
+vElementIndex = 1;
+WHILE ( vElementIndex <= subsetSize  );
+    vElement = HierarchySubsetGetElementName ( pDimension, vApprovalHierarchy, vSubset, vElementIndex );
+    vElementLevel = ElementLevel ( pDimension, vApprovalHierarchy, vElement );
+    #ASCIIOutput ( 'validate_levels.txt', 'Member: ' | vElement | ' - level: ' | NumberToString ( vElementLevel ) );
+    IF ( vElementLevel >  vHighestLevel );
+        vHighestLevel = vElementLevel;
+        vHighestElement = vElement;
+        vHighestLevelCount = 1;
+    ELSEIF ( vElementLevel = vHighestLevel );
+        vHighestLevelCount = vHighestLevelCount + 1;
+    ENDIF;
+    vElementIndex = vElementIndex + 1;
+END;
+
+
+#ASCIIOutput ( 'validate_levels.txt', 'Highest level: ' | NumberToString ( vHighestLevel ) | ' Count: ' | NumberToString ( vHighestLevelCount ) );
+IF ( vHighestLevelCount <> 1 );
+    RunProcess( '}Plans_LogError',
+                'pMessage', 'Invalid approval hierarchy.  Mulitple top level members',
+                'pError', 'Error' );
+    ProcessError;
+ENDIF;
+
+
+vElementIndex = 1;
+WHILE ( vElementIndex <= subsetSize  );
+    vElement = HierarchySubsetGetElementName ( pDimension, vApprovalHierarchy, vSubset, vElementIndex );
+    vElementParentCount = ElementParentCount ( pDimension, vApprovalHierarchy, vElement );
+    vElementChildCount = ElementComponentCount ( pDimension, vApprovalHierarchy, vElement );
+    IF ( vElementParentCount > 1 & vElement @<> vHighestElement );
+        vParentElementInSubsetCount = 0;
+        vElementParentIndex = 1;
+        WHILE ( vElementParentIndex <= vElementParentCount );
+            vParentElement = ElementParent ( pDimension, vApprovalHierarchy, vElement, vElementParentIndex );
+            IF ( HierarchySubsetElementExists (  pDimension, vApprovalHierarchy, vSubset, vParentElement ) = 1 );
+                vParentElementInSubsetCount = vParentElementInSubsetCount + 1;
+            ENDIF;
+            vElementParentIndex = vElementParentIndex + 1;
+        END;
+        IF ( vParentElementInSubsetCount <> 1 );
+            RunProcess( '}Plans_LogError',
+                        'pMessage', 'Invalid approval hierarchy.  Member ' | vElement | ' has multiple parents',
+                        'pError', 'Error' );
+            ProcessError;
+        ENDIF;
+    ELSEIF ( vElementParentCount = 1 & vElement @<> vHighestElement );
+        vElementParent = ElementParent ( pDimension, vApprovalHierarchy, vElement, 1 );
+        IF ( HierarchySubsetElementExists ( pDimension, vApprovalHierarchy, vSubset, vElementParent ) <> 1 );
+            RunProcess( '}Plans_LogError',
+                        'pMessage', 'Element ' | vElement | ' has parent outside of subset',
+                        'pError', 'Error' );
+            ProcessError;
+        ENDIF;
+    ELSEIF ( vElementParentCount = 0 );
+        IF ( vElement @<> vHighestElement );
+            RunProcess( '}Plans_LogError',
+                        'pMessage', 'Element ' | vElement | ' has no parent in subset',
+                        'pError', 'Error' );
+            ProcessError;
+        ENDIF;
+    ENDIF;
+    IF ( vElementChildCount > 0 );
+        vChildElementIndex = 1;
+        WHILE ( vChildElementIndex <= vElementChildCount );
+            vChildElement = ElementComponent( pDimension, vApprovalHierarchy, vElement, vChildElementIndex );
+            IF ( HierarchySubsetElementExists ( pDimension, vApprovalHierarchy, vSubset, vChildElement ) <> 1 );
+                RunProcess( '}Plans_LogError',
+                            'pMessage', 'Element ' | vElement | ' has child outside of subset',
+                            'pError', 'Error' );
+                ProcessError;
+            ENDIF;   
+
+            vChildElementIndex = vChildElementIndex + 1;
+        END;
+    ENDIF;
+    vElementIndex = vElementIndex + 1;
+END;
+
+#endregion

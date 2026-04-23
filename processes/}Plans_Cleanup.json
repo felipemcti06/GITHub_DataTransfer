@@ -1,0 +1,21 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_Cleanup",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"}Plans_Cleanup.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		}
+	],
+	"Variables":[]
+}

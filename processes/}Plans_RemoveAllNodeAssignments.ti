@@ -1,0 +1,20 @@
+#region Prolog
+
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanControlCube = pPrefix;
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+pPlanApprovalSubset = 'Default';
+
+
+vApprovalSubsetIndex = HierarchySubsetGetSize ( vPlanApprovalDimension, vPlanApprovalHierarchy, pPlanApprovalSubset );
+WHILE ( vApprovalSubsetIndex > 0 );
+    vNode = HierarchySubsetGetElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, pPlanApprovalSubset, vApprovalSubsetIndex );
+    CellPutS ( '', vPlanStateCube, vNode, pTask, 'Contributor' );
+    CellPutS ( '', vPlanStateCube, vNode, pTask, 'Reviewer' );
+    vApprovalSubsetIndex =vApprovalSubsetIndex - 1;
+END;
+
+
+#endregion

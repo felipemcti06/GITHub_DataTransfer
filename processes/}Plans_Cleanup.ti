@@ -1,0 +1,36 @@
+#region Prolog
+
+vPlanIndex = 1;
+vPlan = DIMNM ( pPrefix, vPlanIndex );
+WHILE ( vPlan @<> '' );
+    ExecuteProcess ( '}Plans_DeletePlan',
+                    'pPlan', vPlan );
+    vPlanIndex = vPlanIndex + 1;
+    vPlan = DIMNM ( pPrefix, vPlanIndex );
+END;
+
+vCubeIndex = DIMSIZ ( '}Cubes' );
+vCube = DIMNM ( '}Cubes', vCubeIndex );
+WHILE ( vCubeIndex > 0 );
+    IF ( SCAN ( pPrefix, vCube )  = 1 );
+        CubeDestroy ( vCube );
+    ENDIF;
+    vCubeIndex = vCubeIndex -1;
+    vCube = DIMNM ( '}Cubes', vCubeIndex );
+END;
+
+vDimIndex = DIMSIZ ( '}Dimensions' );
+vDimension = DIMNM ( '}Dimensions', vDimIndex );
+WHILE ( vDimIndex > 0 );
+    IF ( SCAN ( pPrefix, vDimension )  = 1 );
+        DimensionDestroy ( vDimension );
+    ENDIF;
+    vDimIndex = vDimIndex -1;
+    vDimension = DIMNM ( '}Dimensions', vDimIndex );
+END;
+
+vPlanGroup = pPrefix | '_Everyone';
+IF ( DimensionElementExists ( '}Groups', vPlanGroup ) = 1 );
+    DeleteGroup ( vPlanGroup );
+ENDIF;
+#endregion

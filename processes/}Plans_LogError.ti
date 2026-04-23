@@ -1,0 +1,28 @@
+#region Prolog
+vNow           = TIMST (NOW(), '\Y-\m-\d \h:\i:\s' );
+vUser           = TM1User();
+
+IF ( pPlan @= '' );
+    vErrorLines = '}Plans_ErrorLines';
+    vCurrentLine = NumberToString ( DIMSIZ ( vErrorLines ) );
+    CellPutS ( pError, '}Plans_Errors', vCurrentLine, 'Error' );
+    CellPutS ( pMessage, '}Plans_Errors', vCurrentLine, 'Message' );
+    CellPutS ( vNow, '}Plans_Errors', vCurrentLine, 'DateTime' );
+    CellPutS ( vUser, '}Plans_Errors', vCurrentLine, 'User' );
+    vNextLine = NumberToString ( DIMSIZ( vErrorLines ) + 1 );
+    DimensionElementInsertDirect ( vErrorLines, '', vNextLine, 'N' );
+ELSE;
+    vPlanErrorLines = '}Plans_' | pPlan | '_ErrorLines';
+    vPlanErrorCube = '}Plans_' | pPlan | '_Errors';
+    vCurrentLine = NumberToString ( DIMSIZ ( vPlanErrorLines ) );
+    CellPutS ( pError, vPlanErrorCube, pTask, vCurrentLine, 'Error' );
+    CellPutS ( pMessage, vPlanErrorCube, pTask, vCurrentLine, 'Message' );
+    CellPutS ( vNow, vPlanErrorCube, pTask, vCurrentLine, 'DateTime' );
+    CellPutS ( vUser, vPlanErrorCube, pTask, vCurrentLine, 'User' );
+    vNextLine = NumberToString ( DIMSIZ( vPlanErrorLines ) + 1 );
+    DimensionElementInsertDirect ( vPlanErrorLines, '', vNextLine, 'N' );
+ENDIF;
+
+
+
+#endregion

@@ -1,0 +1,37 @@
+#region Prolog
+vNow           = TIMST (NOW(), '\Y-\m-\d \h:\i\:\s' );
+vUser = TM1User();
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanErrorCube = pPrefix | '_' | pPlan | '_Errors';
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+
+vApprovalSubsetIndex = 1;
+vApprovalSubsetSize = HierarchySubsetGetSize ( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanApprovalSubset );
+WHILE ( vApprovalSubsetIndex <= vApprovalSubsetSize );
+    vNode = HierarchySubsetGetElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanApprovalSubset, vApprovalSubsetIndex );
+    IF ( pClearAssignments @='Y' );
+        CellPutS ( '', vPlanStateCube, vNode, pTask, 'Contributor' );
+        CellPutS ( '', vPlanStateCube, vNode, pTask, 'Reviewer' );
+    ENDIF;
+    CellPutS ( '', vPlanStateCube, vNode, pTask, 'Owner' );
+    CellPutS ( '', vPlanStateCube, vNode, pTask, 'WorkspaceOwner' );
+    CellPutS ( '', vPlanStateCube, vNode, pTask, 'TakeOwnershipNode' );
+    
+    CellPutS ( '0', vPlanStateCube, vNode, pTask, 'State' );
+    IF ( ElementType ( vPlanApprovalDimension, vPlanApprovalHierarchy, vNode ) @<> 'C' );
+
+        CellPutS ( vNow, vPlanStateCube, vNode, pTask, 'Last Update' );
+        CellPutS ( 'Reset by ' | vUser, vPlanStateCube, vNode, pTask, 'Last action' );
+    ELSE;
+        CellPutS ( '', vPlanStateCube, vNode, pTask, 'Last Update' );
+        CellPutS ( '', vPlanStateCube, vNode, pTask, 'Last action' );
+    ENDIF;
+    vApprovalSubsetIndex = vApprovalSubsetIndex + 1;
+END;
+
+#endregion

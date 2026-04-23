@@ -1,0 +1,23 @@
+#region Prolog
+
+# Remove all or our cubes
+vIndex = DIMSIZ ( '}Cubes' );
+WHILE ( vIndex > 0 );
+    vName = DIMNM ( '}Cubes', vIndex );
+    IF ( SCAN ( pPrefix, vName ) > 0 );
+       CubeDestroy ( vName );
+    ENDIF;
+    vIndex = vIndex - 1;
+END;
+
+# Remove all of our dimensions
+vIndex = DIMSIZ ( '}Dimensions' );
+WHILE ( vIndex > 0 );
+    vName  = DIMNM ( '}Dimensions', vIndex );
+    IF ( SCAN ( pPrefix, vName ) > 0 );
+        DimensionDestroy ( vName );
+    ENDIF;
+    vIndex = vIndex - 1;
+END;
+
+#endregion

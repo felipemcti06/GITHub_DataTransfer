@@ -1,0 +1,18 @@
+#region Prolog
+
+vPlanControlCube = pPrefix;
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+
+vApprovalDimension = CellGetS ( vPlanControlCube, pPlan, 'Dimension' );
+vApprovalHierarchy = CellGetS ( vPlanControlCube, pPlan, 'Hierarchy' );
+vApprovalSubset = CellGetS ( vPlanControlCube, pPlan, 'Subset' );
+
+
+ExecuteProcess ( '}Plans_CreatePlan',
+	'pPlan', pNewPlan,
+	'pDimension', vApprovalDimension,
+	'pHierarchy', vApprovalHierarchy,
+	'pSubset', vApprovalSubset,
+	'pReplace', pReplace,
+    'pPrefix', pPrefix );
+#endregion

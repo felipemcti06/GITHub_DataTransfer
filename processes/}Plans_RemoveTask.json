@@ -1,0 +1,33 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_RemoveTask",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"}Plans_RemoveTask.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pPlan",
+			"Prompt":"",
+			"Value":"Plan A",
+			"Type":"String"
+		},
+		{
+			"Name":"pTask",
+			"Prompt":"",
+			"Value":"Task 1",
+			"Type":"String"
+		},
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		}
+	],
+	"Variables":[]
+}

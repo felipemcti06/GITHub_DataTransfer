@@ -1,0 +1,33 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_ResetPlan",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"}Plans_ResetPlan.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pPlan",
+			"Prompt":"",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		},
+		{
+			"Name":"pClearAssignments",
+			"Prompt":"Y to clear assignments",
+			"Value":"Y",
+			"Type":"String"
+		}
+	],
+	"Variables":[]
+}

@@ -1,0 +1,6 @@
+#region Prolog
+
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+DimensionElementDeleteDirect (vPlanTaskDimension, pTask );
+
+#endregion

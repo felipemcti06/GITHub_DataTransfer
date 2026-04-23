@@ -1,0 +1,46 @@
+#region Prolog
+vNow           = TIMST (NOW(), '\Y-\m-\d \h:\i\:\s' );
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+
+vCurrentNodeOwner = CellGetS ( vPlanStateCube, pNode, pTask, 'Owner' );
+vCurrentContributorGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Contributor' );
+vCurrentReviewerGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Reviewer' );
+
+# Check to if the node is already owned (a user in the contributor group has taken ownership).  We will not allow a node that is already owned to have the contributor group changed
+IF ( vCurrentNodeOwner @<> '' );
+    RunProcess( '}Plans_LogError',
+               'pPlan', pPlan,
+               'pTask', pTask,
+               'pMessage', 'Assignment failed',
+               'pError', 'Node ' | pNode | ' is already owned by ' | vCurrentNodeOwner );
+    ProcessError();
+ENDIF;
+
+IF ( vCurrentContributorGroup @<> '' & pReplace @<> 'Y' );
+    RunProcess( '}Plans_LogError',
+               'pPlan', pPlan,
+               'pTask', pTask,
+               'pMessage', 'Assignment failed',
+               'pError', 'Node ' | pNode | ' already has contributor group ' | vCurrentContributorGroup | ', replace flag required' );
+    ProcessError();
+ENDIF;
+
+# Set the contributor group for the selected node if the contributor group was passe din
+IF ( pContributorGroup @<> '' );
+    CellPutS ( pContributorGroup, vPlanStateCube, pNode, pTask, 'Contributor' );
+ENDIF;
+
+# Set the reviewer group for the selected node, if a reviewer was passed in
+IF ( pReviewerGroup @<> '' );
+    CellPutS ( pReviewerGroup, vPlanStateCube, pNode, pTask, 'Reviewer' );
+ENDIF;
+
+
+
+
+
+#endregion
+#region Epilog
+
+
+#endregion

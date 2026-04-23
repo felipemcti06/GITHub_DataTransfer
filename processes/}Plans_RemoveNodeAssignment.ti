@@ -1,0 +1,7 @@
+#region Prolog
+
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+CellPutS( '', vPlanStateCube, pNode, pTask, 'Contributor' );
+CellPutS( '', vPlanStateCube, pNode, pTask, 'Reviewer' );
+
+#endregion

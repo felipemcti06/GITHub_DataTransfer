@@ -1,0 +1,51 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_CreatePlan",
+	"HasSecurityAccess":true,
+	"Code@Code.link":"}Plans_CreatePlan.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pPlan",
+			"Prompt":"Name of the new plan",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pDimension",
+			"Prompt":"Approval dimension",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pHierarchy",
+			"Prompt":"Hierarchy in the approval dimension",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pSubset",
+			"Prompt":"Subset in the approval dimension (used for Alias setting)",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pReplace",
+			"Prompt":"Replace an existing Workflow with the same name ",
+			"Value":"Y",
+			"Type":"String"
+		},
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		}
+	],
+	"Variables":[]
+}

@@ -1,0 +1,91 @@
+#region Prolog
+vDebugFile = pNode | '_SetNodeParentState.txt';
+vNow = TIMST ( NOW(), '\Y-\m-\d \h:\i:\s' );
+vPlanControlCube = pPrefix;
+vPlanStateCubeName = pPrefix | '_' | pPlan | '_State';
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+# List of node states
+# 0 - Available
+# 1 - In Progress
+# 2 - Reserved 
+# 3 - Pending 
+# 4 - Completed 
+
+vElementIndex = 1;
+vChildCount = ElementComponentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+vCurrentState = CellGetS ( vPlanStateCubeName, pNode, pTask, 'State' ); 
+vTakeOwnershipNode = CellGetS ( vPlanStateCubeName, pNode, pTask, 'TakeOwnershipNode' ); 
+
+vAvailableChildCount = 0;
+vInProgressChildCount = 0;
+vReservedChildCount = 0;
+vSubmittedChildCount = 0;
+vApprovedChildCount = 0;
+
+# Cound the state for each child of the consolidation
+WHILE ( vElementIndex <= vChildCount );
+    vChildElement = ElementComponent ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, vElementIndex );
+    vChildState = CellGetS ( vPlanStateCubeName, vChildElement, pTask, 'State' );
+    IF ( vChildState @= '0' );
+        vAvailableChildCount = vAvailableChildCount + 1;
+    ELSEIF ( vChildState @= '1' );
+        vInProgressChildCount = vInProgressChildCount + 1;
+    ELSEIF ( vChildState @= '2' );
+        vReservedChildCount = vReservedChildCount + 1;
+    ELSEIF ( vChildState @= '3' );
+        vSubmittedChildCount = vSubmittedChildCount + 1;
+    ELSEIF ( vChildState @= '4' );
+        vApprovedChildCount = vApprovedChildCount + 1;
+    ENDIF;
+    vElementIndex = vElementIndex + 1;
+END;
+
+# If the state of all children are Available then the parent is Available
+
+# If the state of all children are Pending then the parent is Pending
+# If the state of all children are Complete then the parent is Complete
+# If the state of all children are Returned then the parent is Returned
+# If at least 1 child is Pending and all other chilren are Complete then the parent is Complete
+# If all other cases (more than one child with different states) the parent is In Progress
+# 
+
+vParentState = '-1';
+IF ( vChildCount = vAvailableChildCount ) ;
+    vParentState = '0';
+ELSEIF ( vChildCount = vSubmittedChildCount );
+    vParentState = '3';
+ELSEIF ( vChildCount = vApprovedChildCount );
+    vParentState = '4';
+ELSEIF ( vSubmittedChildCount > 0 & vAvailableChildCount = 0 & vReservedChildCount = 0 & vInProgressChildCount = 0 );
+    vParentState = '3';
+ELSEIF ( vCurrentState @= '3' & ( vTakeOwnershipNode @= pNode % ElementIsAncestor( vPlanApprovalDimension, vPlanApprovalHierarchy, vTakeOwnershipNode, pNode ) = 1 ) );
+    vParentState = '2';
+ELSEIF ( vCurrentState @= '3' );
+    vParentState = '1';
+ELSEIF ( vCurrentState @= '2' );
+    vParentState = '2';
+ELSEIF ( vCurrentState @= '1' );
+    vParentState = '1';
+ELSEIF ( vCurrentState @= '0' );
+    vParentState = '1';
+ENDIF;
+
+CellPutS ( vParentState, vPlanStateCubeName, pNode, pTask, 'State' );  
+
+vElementParentCount = ElementParentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementParentCount = 1);
+    vParentNode = ElementParent ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, 1 );
+    ExecuteProcess ( '}Plans_SetNodeParentState',
+                    'pPlan', pPlan,
+                    'pTask', pTask,
+                    'pNode', vParentNode,
+                    'pState', vParentState);
+ENDIF;      
+
+
+
+#endregion

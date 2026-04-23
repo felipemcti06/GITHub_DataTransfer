@@ -1,0 +1,39 @@
+{
+	"@type":"Process",
+	"Name":"}Plans_CreateTask",
+	"HasSecurityAccess":false,
+	"Code@Code.link":"}Plans_CreateTask.ti",
+	"UIData":"_ParameterConstraints=e30=\f",
+	"DataSource":
+	{
+		"Type":"None"
+	},
+	"Parameters":
+	[
+		{
+			"Name":"pPlan",
+			"Prompt":"",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pTask",
+			"Prompt":"",
+			"Value":"",
+			"Type":"String"
+		},
+		{
+			"Name":"pOwnership",
+			"Prompt":"1 = Single owner",
+			"Value":1,
+			"Type":"Numeric"
+		},
+		{
+			"Name":"pPrefix",
+			"Prompt":"",
+			"Value":"}Plans",
+			"Type":"String"
+		}
+	],
+	"Variables":[]
+}

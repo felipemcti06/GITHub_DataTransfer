@@ -1,0 +1,93 @@
+#region Prolog
+
+vNow = TIMST (NOW(), '\Y-\m-\d \h:\i:\s' );
+vUser = TM1User();
+
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanControlCube = pPrefix;
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+vContributorGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Contributor' );
+vReviewerGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Reviewer' );
+
+# List of node states
+# 0 - Available
+# 1 - In Progress
+# 2 - Reserved 
+# 3 - Pending 
+# 4 - Completed 
+
+
+vCurrentState = CellGetS ( vPlanStateCube, pNode, pTask, 'State' );
+vCurrentOwner = CellGetS ( vPlanStateCube, pNode, pTask, 'Owner' );
+
+# Validation when ownership is enabled ( vOwnership = 1 )
+
+IF ( vCurrentState @= '2' );
+    vTakeOwnershipNode = CellGetS ( vPlanStateCube, pNode, pTask, 'TakeOwnershipNode' );
+    IF ( pNode @<> vTakeOwnershipNode );
+        # Cannot release ownership on a descendant of a node that ownership was not taken on
+        RunProcess ( '}Plans_LogError',
+                    'pPlan', pPlan,
+                    'pTask', pTask,
+                    'pMessage', 'Ownership must be released on ' | vTakeOwnershipNode,
+                    'pError', 'Error' );
+        ProcessError;
+    ENDIF;
+ELSEIF ( vCurrentState @<> '2' );
+    # Cannot release ownership of a node that is in progress
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Cannot release ownership of node that is not reserved',
+                'pError', 'Error' );
+    ProcessError;
+ENDIF;
+
+vNewState = '0';
+CellPutS ( vNewState, vPlanStateCube, pNode, pTask, 'State' ); 
+CellPutS ( '', vPlanStateCube, pNode, pTask, 'Owner' ); 
+CellPutS ( '', vPlanStateCube, pNode, pTask, 'WorkspaceOwner' );
+CellPutS ( '', vPlanStateCube, pNode, pTask, 'TakeOwnershipNode' ); 
+CellPutS (  'User ' | vUser | ' released ownership', vPlanStateCube, pNode, pTask, 'Last action' ); 
+CellPutS ( vNow, vPlanStateCube, pNode, pTask, 'Last Update' );          
+
+
+#  Updated the descendants of the node where the state is changing 
+vElementChildCount = ElementComponentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementChildCount > 0);
+    vElementIndex = 1;        
+    vNodeChild = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    WHILE ( vNodeChild @<> '' );
+        IF ( ElementIsAncestor ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, vNodeChild )  = 1 );
+            vCurrentState = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'State' );
+            vCurrentOwner = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'Owner' );
+            IF ( vCurrentState @= '2' );
+                CellPutS ( vNewState, vPlanStateCube, vNodeChild, pTask, 'State' ); 
+                CellPutS ( '', vPlanStateCube, vNodeChild, pTask, 'Owner' ); 
+                CellPutS ( '', vPlanStateCube, vNodeChild, pTask, 'WorkspaceOwner' );
+                CellPutS ( '', vPlanStateCube, vNodeChild, pTask, 'TakeOwnershipNode' );
+                CellPutS ( 'User ' | vUser | ' released ownership', vPlanStateCube, vNodeChild, pTask, 'Last action' ); 
+                CellPutS ( vNow, vPlanStateCube, vNodeChild, pTask, 'Last Update' ); 
+            ENDIF;
+        ENDIF;
+        vElementIndex = vElementIndex + 1;       
+        vNodeChild = ElementName( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    END;
+ENDIF;
+
+
+#  Update the ancestors of the node where the state is changing
+ExecuteProcess ( '}Plans_SetNodeParentState',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pNode', pNode,
+                'pState', vNewState,
+                'pPrefix', pPrefix );
+
+
+#endregion

@@ -1,0 +1,98 @@
+#region Prolog
+
+vNow = TIMST (NOW(), '\Y-\m-\d \h:\i:\s' );
+vUser = TM1User();
+
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanControlCube = pPrefix;
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSubset = 'Default';
+
+vContributorGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Contributor' );
+vReviewerGroup = CellGetS ( vPlanStateCube, pNode, pTask, 'Reviewer' );
+
+# List of node states
+# 0 - Available
+# 1 - In Progress
+# 2 - Reserved 
+# 3 - Pending 
+# 4 - Completed 
+
+vCurrentState = CellGetS ( vPlanStateCube, pNode, pTask, 'State' );
+vCurrentOwner = CellGetS ( vPlanStateCube, pNode, pTask, 'Owner' );
+
+IF ( vCurrentState @= '0' );
+    # Cannot return a node that is completed
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Cannot return an available node',
+                'pError', 'Error' );
+    ProcessError;
+ELSEIF ( vCurrentState @= '1' );
+    # Cannot return a node that is in progress
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Cannot return an in progress node',
+                'pError', 'Error' );
+    ProcessError;
+ELSEIF ( vCurrentState @= '2' );
+    # Cannot return a node that is not submitted
+    RunProcess ( '}Plans_LogError',
+                'pPlan', pPlan,
+                'pTask', pTask,
+                'pMessage', 'Cannot return an reserved node',
+                'pError', 'Error' );
+    ProcessError;
+ENDIF;
+
+
+vNewState = '2';
+CellPutS ( vNewState, vPlanStateCube, pNode, pTask, 'State' ); 
+CellPutS ( 'User ' | vUser | ' returned node', vPlanStateCube, pNode, pTask, 'Last action' ); 
+CellPutS ( vNow, vPlanStateCube, pNode, pTask, 'Last Update' ); 
+
+
+#  Updated the descendants of the node where the state is changing 
+vElementChildCount = ElementComponentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementChildCount > 0);
+    vElementIndex = 1;        
+    vNodeChild = ElementName ( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    WHILE ( vNodeChild @<> '' );
+        IF ( ElementIsAncestor ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, vNodeChild )  = 1 );
+            vCurrentState = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'State' );
+            vCurrentOwner = CellGetS ( vPlanStateCube, vNodeChild, pTask, 'Owner' );
+            vActionMessage = '';
+            # Note that owners, last action, and last update fields are only set at the leaf level 
+
+            # We allow changing the node to state 2 from state 3 only 
+            IF (vCurrentState @= '3');
+                CellPutS ( vNewState, vPlanStateCube, vNodeChild, pTask, 'State' ); 
+                CellPutS ( 'User ' | vUser | ' returned node', vPlanStateCube, vNodeChild, pTask, 'Last action' ); 
+                CellPutS ( vNow, vPlanStateCube, vNodeChild, pTask, 'Last Update' ); 
+            ENDIF;
+        ENDIF;
+        vElementIndex = vElementIndex + 1;       
+        vNodeChild = ElementName( vPlanApprovalDimension, vPlanApprovalHierarchy, vElementIndex );
+    END;
+ENDIF;
+
+
+#  Update the ancestors of the node where the state is changing
+vElementParentCount = ElementParentCount ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode );
+IF ( vElementParentCount = 1);
+    vParentNode = ElementParent ( vPlanApprovalDimension, vPlanApprovalHierarchy, pNode, 1 );
+    ExecuteProcess ( '}Plans_SetNodeParentState',
+                    'pPlan', pPlan,
+                    'pTask', pTask,
+                    'pNode', vParentNode,
+                    'pState', vNewState,
+                    'pPrefix', pPrefix );
+ENDIF;
+
+
+#endregion

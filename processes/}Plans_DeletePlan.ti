@@ -1,0 +1,28 @@
+#region Prolog
+
+vPlans = pPrefix;
+vPlanStateCube = pPrefix | '_' | pPlan | '_State';
+vPlanErrors = pPrefix | '_' | pPlan | '_Errors';
+vPlanErrorLinesDimension = pPrefix | '_' | pPlan | '_ErrorLines';
+vPlanTaskDimension = pPrefix | '_' | pPlan | '_Tasks';
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy = vPlanApprovalDimension;
+vPlanApprovalSusbet = 'Default';
+
+IF ( SCAN ( pPrefix, vPlanApprovalSusbet ) = 1 );
+    HierarchySubsetDestroy( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanApprovalSusbet );
+ENDIF;
+
+IF ( SCAN ( pPrefix, vPlanApprovalDimension ) = 1 );
+    DimensionDestroy ( vPlanApprovalDimension );
+ENDIF;
+
+CubeDestroy( vPlanStateCube );
+CubeDestroy( vPlanErrors );
+DimensionDestroy ( vPlanErrors );
+DimensionDestroy (vPlanApprovalDimension );
+DimensionDestroy ( vPlanErrorLinesDimension );
+DimensionDestroy ( vPlanTaskDimension );
+DimensionElementDeleteDirect ( vPlans, pPlan );
+
+#endregion

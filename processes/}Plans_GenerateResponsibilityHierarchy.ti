@@ -1,0 +1,94 @@
+#region Prolog
+
+vPlanApprovalDimension = pPrefix | '_' | pPlan | '_Approval';
+vPlanApprovalHierarchy =  vPlanApprovalDimension;
+vPlanApprovalSubsetAlias = '';
+
+# Generate a subset in the original approval hierarchy if a subset was not provided
+IF ( pSubset @= '' );
+    vSubset = pPrefix | '_' | pPlan;
+    vSetMDX = '{[' | pDimension | '].[' | pHierarchy | '].MEMBERS}';
+    IF ( HierarchySubsetExists ( pDimension, pHierarchy, vSubset ) = 1);
+        HierarchySubsetDestroy ( pDimension, pHierarchy, vSubset );
+    ENDIF;
+    SubsetCreatebyMDX ( vSubset, vSetMDX, 1 );
+ELSE;
+    vSubset = pSubset;
+    vPlanApprovalSubsetAlias = HierarchySubsetAliasGet ( pDimension, pHierarchy, pSubset );
+ENDIF;
+
+IF ( DimensionExists ( vPlanApprovalDimension ) = 1 );
+    DimensionDeleteAllElements ( vPlanApprovalDimension );
+ELSE;
+    DimensionCreate ( vPlanApprovalDimension );
+ENDIF;
+
+IF ( vPlanApprovalSubsetAlias @<> '' & vPlanApprovalSubsetAlias @<> 'MEMBER_NAME' );
+    AttrInsert ( vPlanApprovalDimension, '', vPlanApprovalSubsetAlias, 'A' );
+ENDIF;
+
+IF ( HierarchyExists ( vPlanApprovalDimension, vPlanApprovalHierarchy ) = 1 );
+    HierarchyDeleteAllElements ( vPlanApprovalDimension, vPlanApprovalHierarchy );
+ELSE;
+    HierarchyCreate ( vPlanApprovalDimension, vPlanApprovalHierarchy );
+ENDIF;
+
+vApprovalSubsetIndex = 1;
+vApprovalSubsetSize = HierarchySubsetGetSize ( pDimension, pHierarchy, vSubset );
+WHILE ( vApprovalSubsetIndex <= vApprovalSubsetSize );
+    vNode = HierarchySubsetGetElementName ( pDimension, pHierarchy, vSubset, vApprovalSubsetIndex );
+    vNodeType = ElementType ( pDimension, pHierarchy, vNode );
+    HierarchyElementInsertDirect ( vPlanApprovalDimension, vPlanApprovalHierarchy, '', vNode, vNodeType );
+    vParentIndex = 1;
+    WHILE ( vParentIndex <= ElementParentCount ( pDimension, pHierarchy, vNode ) );
+        vNodeParent = ElementParent ( pDimension, pHierarchy, vNode, vParentIndex );
+        IF ( HierarchySubsetElementExists ( pDimension, pHierarchy, vSubset, vNodeParent ) = 1 );
+            vNodeWeight = ElementWeight ( pDimension, pHierarchy, vNodeParent, vNode );
+            HierarchyElementInsertDirect ( vPlanApprovalDimension, vPlanApprovalHierarchy, '', vNodeParent, 'C' );
+            HierarchyElementComponentAddDirect ( vPlanApprovalDimension, vPlanApprovalHierarchy, vNodeParent, vNode, vNodeWeight );
+        ENDIF;
+        vParentIndex = vParentIndex + 1;
+        vElementParentName = ElementParent ( pDimension, pHierarchy, vNode, vParentIndex );
+    END;
+    vApprovalSubsetIndex = vApprovalSubsetIndex + 1;
+END;
+
+#endregion
+#region Epilog
+
+IF ( vPlanApprovalSubsetAlias @<> '' & vPlanApprovalSubsetAlias @<> 'MEMBER_NAME' );
+    vApprovalSubsetIndex = 1;
+    vApprovalSubsetSize = HierarchySubsetGetSize ( pDimension, pHierarchy, vSubset );
+    WHILE ( vApprovalSubsetIndex <= vApprovalSubsetSize );
+        vNode = HierarchySubsetGetElementName ( pDimension, pHierarchy, vSubset, vApprovalSubsetIndex );
+        vNodeType = ElementType ( pDimension, pHierarchy, vNode );
+        ElementAttrPutS ( ElementAttrS ( pDimension, pHierarchy, vNode, vPlanApprovalSubsetAlias), vPlanApprovalDimension, vPlanApprovalHierarchy, vNode, vPlanApprovalSubsetAlias );
+        vParentIndex = 1;
+        WHILE ( vParentIndex <= ElementParentCount ( pDimension, pHierarchy, vNode ) );
+            vNodeParent = ElementParent ( pDimension, pHierarchy, vNode, vParentIndex );
+            IF ( HierarchySubsetElementExists ( pDimension, pHierarchy, vSubset, vNodeParent ) = 1 );
+                vNodeWeight = ElementWeight ( pDimension, pHierarchy, vNodeParent, vNode );
+                ElementAttrPutS ( ElementAttrS ( pDimension, pHierarchy, vNodeParent, vPlanApprovalSubsetAlias) , vPlanApprovalDimension, vPlanApprovalHierarchy, vNodeParent, vPlanApprovalSubsetAlias );
+            ENDIF;
+            vParentIndex = vParentIndex + 1;
+            vElementParentName = ElementParent ( pDimension, pHierarchy, vNode, vParentIndex );
+        END;
+        vApprovalSubsetIndex = vApprovalSubsetIndex + 1;
+    END;
+ENDIF;
+
+vPlanSubset = 'Default';
+IF ( HierarchySubsetExists ( vPlanApprovalDimension, vPlanApprovalHierarchy, vSubset ) = 1 );
+    HierarchySubsetDestroy ( vPlanApprovalDimension, vPlanApprovalHierarchy, vSubset );
+ENDIF;
+
+vSetMDX = '{[' | vPlanApprovalDimension | '].[' | vPlanApprovalHierarchy | '].MEMBERS}';
+IF ( HierarchySubsetExists ( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanSubset ) = 1 );
+    HierarchySubsetDestroy( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanSubset );
+ENDIF;
+SubsetCreatebyMDX ( vPlanSubset, vSetMDX );
+
+IF ( vPlanApprovalSubsetAlias @<> '' & vPlanApprovalSubsetAlias @<> 'MEMBER_NAME' );   
+    HierarchySubsetAliasSet ( vPlanApprovalDimension, vPlanApprovalHierarchy, vPlanSubset, vPlanApprovalSubsetAlias );
+ENDIF;
+#endregion
